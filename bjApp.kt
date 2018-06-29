@@ -1,11 +1,12 @@
 import java.util.*
 
 abstract class PlayerBase{
-  private val hand : MutableList<Card> = mutableListOf()
-  private val score = 0
-  private val burst : Boolean = false
+  private var hand : MutableList<Card> = mutableListOf()
+  private var score = 0
+  private var burst : Boolean = false
 
-  abstract fun drawCard(){}
+  abstract fun playerTurn(deck :Deck)
+  abstract fun playerInit(deck :Deck)
 
   fun addhand(draw : Card){
     hand.add(draw)
@@ -13,8 +14,7 @@ abstract class PlayerBase{
 
   fun getScore():Int{
     score = 0
-
-    for(card in hand) score += card.getPoint
+    for(card in hand) score += card.getPoint()
 
     return score
   }
@@ -26,37 +26,75 @@ abstract class PlayerBase{
 }
 
 class User :PlayerBase(){
+  lateinit var draw:Card
+  override fun playerInit(deck :Deck){
+    draw = deck.drawCard()
+    addhand(draw)
+    println("あなたは${draw.getNoString()}を引きました")
+    draw = deck.drawCard()
+    addhand(draw)
+    println("あなたは${draw.getNoString()}を引きました")
 
+    println("あなたの点数は${getScore()}点です\n")
+  }
+
+  override fun playerTurn(deck :Deck){
+    var input : String?
+    lateinit var draw:Card
+    do{
+      println("カードを引きますか？(Y/N)")
+      input = readLine()
+      when (input) {
+        "Y" -> {
+          draw = deck.drawCard()
+          addhand(draw)
+          println("あなたは${draw.getNoString()}を引きました")
+          println("あなたの点数は${getScore()}点です\n")
+        }
+        "N" -> println("あなたの手番を終了します\n")
+        else-> println("正しく入力してください")
+      }
+    }while(input != "N")
+  }
 }
 
 class Dealer :PlayerBase(){
+  private lateinit var draw:Card
+  override fun playerInit(deck :Deck){
+    draw = deck.drawCard()
+    addhand(draw)
+    println("相手が${draw.getNoString()}を引きました")
+    draw = deck.drawCard()
+    addhand(draw)
+    println("相手がカードを1枚引きました\n")
+  }
 
+  override fun playerTurn(deck :Deck){
+    while(getScore()<17){
+      draw = deck.drawCard()
+      addhand(draw)
+      println("相手が${draw.getNoString()}を引きました")
+    }
+    println("相手の手番を終了します\n")
+  }
 }
 
 
-class Card{
-  val number : Int
-  val mark : String
-  fun Card(num: Int, ma: String){
-    numbar = num
-    mark = ma
-  }
-
+class Card(var number: Int,var mark: String){
   fun getNum() :Int = number
-  fun getMark() :String = mark
   fun getPoint() :Int = when(number){
     in 10..13 -> 10
     else      -> number
   }
   fun getNoString() :String{
     var num :String = when(number) {
-      1  -> 'A'
-      11 -> 'J'
-      12 -> 'Q'
-      13 -> 'K'
+      1  -> "A"
+      11 -> "J"
+      12 -> "Q"
+      13 -> "K"
       else -> "$number"
     }
-    return "$mark の $num"
+    return mark+"の"+num
     }
 }
 
@@ -65,34 +103,62 @@ class Deck{
 
   fun deckInit(){
     for (i in 1..13){
-      cardList.add(i,"スペード")
-      cardList.add(i,"クラブ")
-      cardList.add(i,"ダイヤ")
-      cardList.add(i,"ハート")
+      cardList.add(Card(i,"スペード"))
+      cardList.add(Card(i,"  クラブ"))
+      cardList.add(Card(i,"  ダイヤ"))
+      cardList.add(Card(i,"  ハート"))
     }
   }
 
   fun drawCard():Card{
-    val draw:Card
-    val rand = Random()
-    val r = rand.nextInt(CardList.count()-1)
+    val r = Random().nextInt(cardList.count()-1)
+    val return_Card = cardList.elementAt(r)
 
-    draw = CardList.elementAt(r)
-
-    return draw
+    cardList.removeAt(r)
+    return return_Card
   }
 
-  fun deckView(){
+  /* fun deckView(){
     for(card in cardList)
-    println(getNoString())
+    println(card.getNoString())
+  } */
+}
+
+class Result{
+  fun calcScore(user:User,dealer:Dealer){
+    if(user.isBurst() && dealer.isBurst())
+      println("Both Burst,DRAW")
+    else if(user.isBurst())
+      println("Your Burst,LOSE")
+    else if(dealer.isBurst())
+      println("Dealer Burst,WIN")
+    else if(user.getScore() < dealer.getScore())
+      println("Dealer has more point,LOSE")
+    else if(user.getScore() > dealer.getScore())
+      println("Your have more point,WIN")
+    else
+      println("Point is a tie,DRAW")
+
+    println("USER ${user.getScore()},DEALER ${dealer.getScore()}")
   }
 }
 
 fun main(args: Array<String>){
-  var Deck = Deck()
-  deck.deckinit()
-  deck.deckView()
+  var deck = Deck()
+  var user = User()
+  var dealer = Dealer()
+  var result = Result()
 
+  deck.deckInit()
+  /* deck.deckView() */
+
+  user.playerInit(deck)
+  dealer.playerInit(deck)
+  user.playerTurn(deck)
+  dealer.playerTurn(deck)
+
+  result.calcScore(user,dealer)
+  //view result
 }
 
 
